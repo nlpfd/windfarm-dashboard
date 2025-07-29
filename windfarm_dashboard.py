@@ -70,7 +70,7 @@ fig.update_layout(
 st.plotly_chart(fig, use_container_width=True)
 
 # --- Responsive Embedded Google Map Below ---
-st.markdown("### 📍 Interactive Curtailment Map (2023–2026)")
+st.markdown("### 📍 Interactive Curtailment Map (2023–2025)")
 components.iframe(
     src="https://www.google.com/maps/d/embed?mid=1XPZ5YKrHSGNfGw05w_NyET_U_hotcGk&ehbc=2E312F",
     width=0,
