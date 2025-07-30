@@ -74,5 +74,5 @@ st.markdown("### 📍 Interactive Curtailment Map (2023–2025)")
 components.iframe(
     src="https://www.google.com/maps/d/embed?mid=1XPZ5YKrHSGNfGw05w_NyET_U_hotcGk&ehbc=2E312F",
     width=0,
-    height=900
+    height=700
 )
