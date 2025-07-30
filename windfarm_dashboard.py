@@ -30,7 +30,7 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-st.title("Scottish Wind Farm Curtailment Dashboard")
+st.title("Scottish Wind Farm Curtailment Dashboard - Prototype V1")
 
 windfarms = df["Generator_Full_Name"].unique()
 selected_farm = st.selectbox("Choose Wind Farm", sorted(windfarms))
@@ -74,5 +74,14 @@ st.markdown("### 📍 Interactive Curtailment Map (2023–2025)")
 components.iframe(
     src="https://www.google.com/maps/d/embed?mid=1XPZ5YKrHSGNfGw05w_NyET_U_hotcGk&ehbc=2E312F",
     width=0,
-    height=600
+    height=620
+)
+
+# --- Footer Text ---
+st.markdown("---")
+st.markdown(
+    "<div style='text-align: center; font-size: 0.9rem; color: grey;'>"
+    "This is an experimental prototype built on NESO curtailment data. It's intended for educational and exploratory use only, and should not be interpreted as an official representation of NESO data or policy."
+    "</div>",
+    unsafe_allow_html=True
 )
