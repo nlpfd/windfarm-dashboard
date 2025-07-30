@@ -64,7 +64,7 @@ fig.update_layout(
     xaxis_title=granularity,
     title_x=0.0,
     margin=dict(l=0, r=0, t=40, b=0),
-    height=400
+    height=350
 )
 
 st.plotly_chart(fig, use_container_width=True)
