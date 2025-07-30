@@ -1,4 +1,3 @@
-
 import streamlit as st
 import pandas as pd
 import plotly.express as px
@@ -18,7 +17,7 @@ df = load_data()
 # --- UI ---
 st.set_page_config(layout="wide")
 
-# Custom styles
+# Reduce top padding
 st.markdown("""
     <style>
         .block-container {
@@ -46,31 +45,34 @@ st.markdown(f"### Total Curtailed (MWh)\n**{total:,.1f}**")
 
 # --- Plotting ---
 if granularity == "Daily":
-    group_df = filtered.groupby("DateOnly")["BOA_Volume"].sum().reset_index()
-    x_col = "DateOnly"
-elif granularity == "Weekly":
-    group_df = filtered.groupby("Week")["BOA_Volume"].sum().reset_index()
-    x_col = "Week"
-else:
-    group_df = filtered.groupby("Month")["BOA_Volume"].sum().reset_index()
-    x_col = "Month"
+    daily = filtered.groupby("DateOnly")["BOA_Volume"].sum().reset_index()
+    fig = px.bar(daily, x="DateOnly", y="BOA_Volume", title=f"Daily Curtailment for {selected_farm}")
+    fig.update_traces(marker_color="steelblue")
 
-fig = px.bar(group_df, x=x_col, y="BOA_Volume", title=f"{granularity} Curtailment for {selected_farm}")
-fig.update_traces(marker_color="steelblue")
+elif granularity == "Weekly":
+    weekly = filtered.groupby("Week")["BOA_Volume"].sum().reset_index()
+    fig = px.bar(weekly, x="Week", y="BOA_Volume", title=f"Weekly Curtailment for {selected_farm}")
+    fig.update_traces(marker_color="mediumblue")
+
+else:  # Monthly
+    monthly = filtered.groupby("Month")["BOA_Volume"].sum().reset_index()
+    fig = px.bar(monthly, x="Month", y="BOA_Volume", title=f"Monthly Curtailment for {selected_farm}")
+    fig.update_traces(marker_color="darkblue")
+
 fig.update_layout(
     yaxis_title="Curtailment (MWh)",
     xaxis_title=granularity,
     title_x=0.0,
-    margin=dict(l=10, r=10, t=40, b=40),
-    height=500
+    margin=dict(l=0, r=0, t=40, b=0),
+    height=400
 )
 
 st.plotly_chart(fig, use_container_width=True)
 
-# --- Google Map ---
+# --- Responsive Embedded Google Map Below ---
 st.markdown("### 📍 Interactive Curtailment Map (2023–2025)")
 components.iframe(
     src="https://www.google.com/maps/d/embed?mid=1XPZ5YKrHSGNfGw05w_NyET_U_hotcGk&ehbc=2E312F",
-    width=700,
-    height=600
+    width=0,
+    height=900
 )
