@@ -76,7 +76,13 @@ components.iframe(
     width=0,
     height=620
 )
-
+st.markdown(
+    "<div style='font-size: 0.85rem; color: grey; margin-top: -0.5rem;'>"
+    "📌 <em>Tip:</em> Click the icon in the top-left corner of the map to view the list of wind farms."
+    "<br>Or <a href='https://www.google.com/maps/d/viewer?mid=1XPZ5YKrHSGNfGw05w_NyET_U_hotcGk&hl=en' target='_blank'>open the full map in a new tab</a>."
+    "</div>",
+    unsafe_allow_html=True
+)
 # --- Footer Text ---
 st.markdown("---")
 st.markdown(
