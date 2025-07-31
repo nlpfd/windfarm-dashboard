@@ -33,30 +33,36 @@ st.markdown("""
 st.title("Scottish Wind Farm Curtailment Dashboard - Prototype V1")
 
 windfarms = df["Generator_Full_Name"].unique()
-selected_farm = st.selectbox("Choose Wind Farm", sorted(windfarms))
+windfarm_options = ["All"] + sorted(windfarms)
+selected_farm = st.selectbox("Choose Wind Farm", windfarm_options)
 
 granularity = st.radio("Select Time Granularity", ["Daily", "Weekly", "Monthly"], horizontal=True)
 
-filtered = df[df["Generator_Full_Name"] == selected_farm]
+if selected_farm == "All":
+    filtered = df.copy()
+else:
+    filtered = df[df["Generator_Full_Name"] == selected_farm]
 
 # --- Total ---
 total = filtered["BOA_Volume"].sum()
 st.markdown(f"### Total Curtailed (MWh)\n**{total:,.1f}**")
 
 # --- Plotting ---
+title_prefix = "All Wind Farms" if selected_farm == "All" else selected_farm
+
 if granularity == "Daily":
     daily = filtered.groupby("DateOnly")["BOA_Volume"].sum().reset_index()
-    fig = px.bar(daily, x="DateOnly", y="BOA_Volume", title=f"Daily Curtailment for {selected_farm}")
+    fig = px.bar(daily, x="DateOnly", y="BOA_Volume", title=f"Daily Curtailment for {title_prefix}")
     fig.update_traces(marker_color="steelblue")
 
 elif granularity == "Weekly":
     weekly = filtered.groupby("Week")["BOA_Volume"].sum().reset_index()
-    fig = px.bar(weekly, x="Week", y="BOA_Volume", title=f"Weekly Curtailment for {selected_farm}")
+    fig = px.bar(weekly, x="Week", y="BOA_Volume", title=f"Weekly Curtailment for {title_prefix}")
     fig.update_traces(marker_color="mediumblue")
 
 else:  # Monthly
     monthly = filtered.groupby("Month")["BOA_Volume"].sum().reset_index()
-    fig = px.bar(monthly, x="Month", y="BOA_Volume", title=f"Monthly Curtailment for {selected_farm}")
+    fig = px.bar(monthly, x="Month", y="BOA_Volume", title=f"Monthly Curtailment for {title_prefix}")
     fig.update_traces(marker_color="darkblue")
 
 fig.update_layout(
@@ -82,6 +88,7 @@ st.markdown(
     "</div>",
     unsafe_allow_html=True
 )
+
 # --- Footer Text ---
 st.markdown("---")
 st.markdown(
