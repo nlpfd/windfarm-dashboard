@@ -8,8 +8,11 @@ import streamlit.components.v1 as components
 def load_data():
     df = pd.read_csv("scottish_half_hourly_curtailment.csv", parse_dates=["Date"])
     df["DateOnly"] = df["Date"].dt.date
-    df["Week"] = df["Date"].dt.strftime('%Y-W%U')
+    df["Week"] = df["Date"].dt.strftime('%G-W%V')  # ISO weeks
     df["Month"] = df["Date"].dt.to_period("M").astype(str)
+
+    # ✅ Correct BOA volumes: MW × 0.5 h = MWh
+    df["MWh"] = df["BOA_Volume"] * 0.5
     return df
 
 df = load_data()
@@ -30,7 +33,7 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-st.title("Scottish Wind Farm Curtailment Dashboard - Prototype V1")
+st.title("Scottish Wind Farm Curtailment Dashboard - Prototype V1 (Corrected)")
 
 windfarms = df["Generator_Full_Name"].unique()
 windfarm_options = ["All"] + sorted(windfarms)
@@ -44,25 +47,25 @@ else:
     filtered = df[df["Generator_Full_Name"] == selected_farm]
 
 # --- Total ---
-total = filtered["BOA_Volume"].sum()
+total = filtered["MWh"].sum()
 st.markdown(f"### Total Curtailed (MWh)\n**{total:,.1f}**")
 
 # --- Plotting ---
 title_prefix = "All Wind Farms" if selected_farm == "All" else selected_farm
 
 if granularity == "Daily":
-    daily = filtered.groupby("DateOnly")["BOA_Volume"].sum().reset_index()
-    fig = px.bar(daily, x="DateOnly", y="BOA_Volume", title=f"Daily Curtailment for {title_prefix}")
+    daily = filtered.groupby("DateOnly")["MWh"].sum().reset_index()
+    fig = px.bar(daily, x="DateOnly", y="MWh", title=f"Daily Curtailment for {title_prefix}")
     fig.update_traces(marker_color="steelblue")
 
 elif granularity == "Weekly":
-    weekly = filtered.groupby("Week")["BOA_Volume"].sum().reset_index()
-    fig = px.bar(weekly, x="Week", y="BOA_Volume", title=f"Weekly Curtailment for {title_prefix}")
+    weekly = filtered.groupby("Week")["MWh"].sum().reset_index()
+    fig = px.bar(weekly, x="Week", y="MWh", title=f"Weekly Curtailment for {title_prefix}")
     fig.update_traces(marker_color="mediumblue")
 
 else:  # Monthly
-    monthly = filtered.groupby("Month")["BOA_Volume"].sum().reset_index()
-    fig = px.bar(monthly, x="Month", y="BOA_Volume", title=f"Monthly Curtailment for {title_prefix}")
+    monthly = filtered.groupby("Month")["MWh"].sum().reset_index()
+    fig = px.bar(monthly, x="Month", y="MWh", title=f"Monthly Curtailment for {title_prefix}")
     fig.update_traces(marker_color="darkblue")
 
 fig.update_layout(
