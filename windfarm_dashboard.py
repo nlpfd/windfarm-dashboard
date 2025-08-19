@@ -9,7 +9,6 @@ def load_data():
     df = pd.read_csv("scottish_half_hourly_curtailment.csv", parse_dates=["Date"])
     df["DateOnly"] = df["Date"].dt.date
     df["Week"] = df["Date"].dt.strftime('%G-W%V')  # ISO weeks
-    df["Month"] = df["Date"].dt.to_period("M").astype(str)
 
     # ✅ Correct BOA volumes: MW × 0.5 h = MWh
     df["MWh"] = df["BOA_Volume"] * 0.5
@@ -41,10 +40,24 @@ selected_farm = st.selectbox("Choose Wind Farm", windfarm_options)
 
 granularity = st.radio("Select Time Granularity", ["Daily", "Weekly", "Monthly"], horizontal=True)
 
+# --- Month grouping choice ---
+month_type = st.radio(
+    "Select Month Grouping",
+    ["Calendar Months", "Settlement Months"],
+    horizontal=True
+)
+
 if selected_farm == "All":
     filtered = df.copy()
 else:
     filtered = df[df["Generator_Full_Name"] == selected_farm]
+
+# Apply month definition
+if month_type == "Calendar Months":
+    filtered["Month"] = filtered["Date"].dt.to_period("M").astype(str)
+else:
+    # Settlement months: shift by 1 hour to push 23:00–23:30 into next day
+    filtered["Month"] = (filtered["Date"] - pd.Timedelta(hours=1)).dt.to_period("M").astype(str)
 
 # --- Total ---
 total = filtered["MWh"].sum()
@@ -96,7 +109,8 @@ st.markdown(
 st.markdown("---")
 st.markdown(
     "<div style='text-align: center; font-size: 0.9rem; color: grey;'>"
-    "This is an experimental prototype built on NESO curtailment data. It's intended for educational and exploratory use only, and should not be interpreted as an official representation of NESO data or policy."
+    "This is an experimental prototype built on NESO curtailment data. It's intended for educational and exploratory use only, "
+    "and should not be interpreted as an official representation of NESO data or policy."
     "</div>",
     unsafe_allow_html=True
 )
