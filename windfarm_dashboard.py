@@ -91,7 +91,7 @@ st.markdown(
 st.markdown("---")
 st.markdown(
     "<div style='text-align: center; font-size: 0.9rem; color: grey;'>"
-    "This is an experimental prototype built on NESO curtailment data. "
+    "This is an experimental prototype built on NESO and BMRS Elexon curtailment data. "
     "It's intended for educational and exploratory use only, and should not be interpreted as an official representation of NESO data or policy."
     "</div>",
     unsafe_allow_html=True
