@@ -7,9 +7,7 @@ import streamlit.components.v1 as components
 @st.cache_data
 def load_data():
     df = pd.read_csv("scottish_half_hourly_curtailment.csv", parse_dates=["Date"])
-    df["DateOnly"] = df["Date"].dt.date
-    df["Week"] = df["Date"].dt.strftime('%G-W%V')  # ISO weeks
-    # Correct BOA volumes: MW × 0.5 h = MWh
+    # ✅ Correct BOA volumes: MW × 0.5 h = MWh
     df["MWh"] = df["BOA_Volume"] * 0.5
     return df
 
@@ -17,6 +15,8 @@ df = load_data()
 
 # --- UI ---
 st.set_page_config(layout="wide")
+
+# Reduce top padding
 st.markdown("""
     <style>
         .block-container { padding-top: 1rem; padding-bottom: 1rem; }
@@ -26,30 +26,37 @@ st.markdown("""
 
 st.title("Scottish Wind Farm Curtailment Dashboard - Prototype V1 (Corrected)")
 
+# --- Farm selector ---
 windfarms = df["Generator_Full_Name"].unique()
 selected_farm = st.selectbox("Choose Wind Farm", ["All"] + sorted(windfarms))
 
+# --- Time granularity ---
 granularity = st.radio("Select Time Granularity", ["Daily", "Weekly", "Monthly"], horizontal=True)
 
-# Show a single toggle only when Monthly is selected
-use_settlement = False
-if granularity == "Monthly":
-    use_settlement = st.toggle("Use Settlement Calendar (23:00–23:00)", value=False, help="Matches NESO settlement months / Windtable")
+# --- Settlement toggle ---
+use_settlement = st.toggle(
+    "Use Settlement Calendar (23:00–23:00)",
+    value=False,
+    help="When on, daily/weekly/monthly groupings use settlement boundaries instead of calendar ones."
+)
 
-# Filter data
+# --- Filter by farm ---
 filtered = df if selected_farm == "All" else df[df["Generator_Full_Name"] == selected_farm]
 filtered = filtered.copy()
 
-# Build Month only if needed, default is traditional calendar months
-if granularity == "Monthly":
-    if use_settlement:
-        # shift back 1h so 23:00–23:30 rolls into next day/month (settlement convention)
-        filtered["Month"] = (filtered["Date"] - pd.Timedelta(hours=1)).dt.to_period("M").astype(str)
-    else:
-        filtered["Month"] = filtered["Date"].dt.to_period("M").astype(str)
+# --- Settlement-aware timestamp ---
+ts = filtered["Date"] - pd.Timedelta(hours=1) if use_settlement else filtered["Date"]
+filtered["TS"] = ts
+
+# --- Grouping keys from adjusted TS ---
+filtered["DateOnly"] = filtered["TS"].dt.date
+iso = filtered["TS"].dt.isocalendar()
+filtered["Week"] = iso["year"].astype(str) + "-W" + iso["week"].astype(str).str.zfill(2)
+filtered["Month"] = filtered["TS"].dt.to_period("M").astype(str)
 
 # --- Total ---
-st.markdown(f"### Total Curtailed (MWh)\n**{filtered['MWh'].sum():,.1f}**")
+total = filtered["MWh"].sum()
+st.markdown(f"### Total Curtailed (MWh)\n**{total:,.1f}**")
 
 # --- Plotting ---
 title_prefix = "all listed Wind Farms" if selected_farm == "All" else selected_farm
@@ -66,7 +73,7 @@ elif granularity == "Weekly":
 
 else:  # Monthly
     monthly = filtered.groupby("Month", as_index=False)["MWh"].sum()
-    label = "Settlement Month" if use_settlement else "Calendar Month"
+    label = "Settlement Months" if use_settlement else "Calendar Months"
     fig = px.bar(monthly, x="Month", y="MWh", title=f"Monthly Curtailment for {title_prefix} ({label})")
     fig.update_traces(marker_color="darkblue")
 
@@ -79,7 +86,7 @@ fig.update_layout(
 )
 st.plotly_chart(fig, use_container_width=True)
 
-# --- Map ---
+# --- Responsive Embedded Google Map Below ---
 st.markdown("### 📍 Interactive Curtailment Map (2023–2025)")
 components.iframe(
     src="https://www.google.com/maps/d/embed?mid=1XPZ5YKrHSGNfGw05w_NyET_U_hotcGk&ehbc=2E312F",
@@ -92,11 +99,12 @@ st.markdown(
     unsafe_allow_html=True
 )
 
-# --- Footer ---
+# --- Footer Text ---
 st.markdown("---")
 st.markdown(
     "<div style='text-align: center; font-size: 0.9rem; color: grey;'>"
-    "This is an experimental prototype built on NESO curtailment data. It's intended for educational and exploratory use only."
+    "This is an experimental prototype built on NESO curtailment data. "
+    "It's intended for educational and exploratory use only, and should not be interpreted as an official representation of NESO data or policy."
     "</div>",
     unsafe_allow_html=True
 )
