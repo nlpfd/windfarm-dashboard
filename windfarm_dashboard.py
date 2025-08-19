@@ -33,26 +33,15 @@ selected_farm = st.selectbox("Choose Wind Farm", ["All"] + sorted(windfarms))
 # --- Time granularity ---
 granularity = st.radio("Select Time Granularity", ["Daily", "Weekly", "Monthly"], horizontal=True)
 
-# --- Settlement toggle ---
-use_settlement = st.toggle(
-    "Use Settlement Calendar (23:00–23:00)",
-    value=False,
-    help="When on, daily/weekly/monthly groupings use settlement boundaries instead of calendar ones."
-)
-
 # --- Filter by farm ---
 filtered = df if selected_farm == "All" else df[df["Generator_Full_Name"] == selected_farm]
 filtered = filtered.copy()
 
-# --- Settlement-aware timestamp ---
-ts = filtered["Date"] - pd.Timedelta(hours=1) if use_settlement else filtered["Date"]
-filtered["TS"] = ts
-
-# --- Grouping keys from adjusted TS ---
-filtered["DateOnly"] = filtered["TS"].dt.date
-iso = filtered["TS"].dt.isocalendar()
+# --- Grouping keys from Date ---
+filtered["DateOnly"] = filtered["Date"].dt.date
+iso = filtered["Date"].dt.isocalendar()
 filtered["Week"] = iso["year"].astype(str) + "-W" + iso["week"].astype(str).str.zfill(2)
-filtered["Month"] = filtered["TS"].dt.to_period("M").astype(str)
+filtered["Month"] = filtered["Date"].dt.to_period("M").astype(str)
 
 # --- Total ---
 total = filtered["MWh"].sum()
@@ -73,8 +62,7 @@ elif granularity == "Weekly":
 
 else:  # Monthly
     monthly = filtered.groupby("Month", as_index=False)["MWh"].sum()
-    label = "Settlement Months" if use_settlement else "Calendar Months"
-    fig = px.bar(monthly, x="Month", y="MWh", title=f"Monthly Curtailment for {title_prefix} ({label})")
+    fig = px.bar(monthly, x="Month", y="MWh", title=f"Monthly Curtailment for {title_prefix} (Calendar Months)")
     fig.update_traces(marker_color="darkblue")
 
 fig.update_layout(
