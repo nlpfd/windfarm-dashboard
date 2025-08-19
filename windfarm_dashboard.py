@@ -8,7 +8,7 @@ import streamlit.components.v1 as components
 def load_data():
     df = pd.read_csv("scottish_half_hourly_curtailment.csv", parse_dates=["Date"])
     # ✅ Correct BOA volumes: MW × 0.5 h = MWh
-    df["MWh"] = df["BOA_Volume"] * 0.5
+    df["MWh"] = (df["BOA_Volume"] * 0.5).abs()  # use abs so values are positive
     return df
 
 df = load_data()
@@ -57,17 +57,33 @@ title_prefix = "all listed Wind Farms" if selected_farm == "All" else selected_f
 
 if granularity == "Daily":
     daily = filtered.groupby("DateOnly", as_index=False)["MWh"].sum()
-    fig = px.bar(daily, x="DateOnly", y="MWh", title=f"Daily Curtailment for {title_prefix} ({selected_year})")
+    # fill all days in the year
+    all_days = pd.date_range(f"{selected_year}-01-01", f"{selected_year}-12-31", freq="D")
+    daily = daily.set_index("DateOnly").reindex(all_days, fill_value=0).reset_index()
+    daily.rename(columns={"index": "DateOnly"}, inplace=True)
+    fig = px.bar(daily, x="DateOnly", y="MWh",
+                 title=f"Daily Curtailment for {title_prefix} ({selected_year})")
     fig.update_traces(marker_color="steelblue")
 
 elif granularity == "Weekly":
     weekly = filtered.groupby("Week", as_index=False)["MWh"].sum()
-    fig = px.bar(weekly, x="Week", y="MWh", title=f"Weekly Curtailment for {title_prefix} ({selected_year})")
+    # generate all ISO weeks in the year
+    all_weeks = pd.period_range(f"{selected_year}-01-01", f"{selected_year}-12-31", freq="W")
+    all_weeks = all_weeks.astype(str)
+    weekly = weekly.set_index("Week").reindex(all_weeks, fill_value=0).reset_index()
+    weekly.rename(columns={"index": "Week"}, inplace=True)
+    fig = px.bar(weekly, x="Week", y="MWh",
+                 title=f"Weekly Curtailment for {title_prefix} ({selected_year})")
     fig.update_traces(marker_color="mediumblue")
 
 else:  # Monthly
     monthly = filtered.groupby("Month", as_index=False)["MWh"].sum()
-    fig = px.bar(monthly, x="Month", y="MWh", title=f"Monthly Curtailment for {title_prefix} ({selected_year})")
+    # generate all months in the year
+    all_months = pd.period_range(f"{selected_year}-01", f"{selected_year}-12", freq="M").astype(str)
+    monthly = monthly.set_index("Month").reindex(all_months, fill_value=0).reset_index()
+    monthly.rename(columns={"index": "Month"}, inplace=True)
+    fig = px.bar(monthly, x="Month", y="MWh",
+                 title=f"Monthly Curtailment for {title_prefix} ({selected_year})")
     fig.update_traces(marker_color="darkblue")
 
 fig.update_layout(
