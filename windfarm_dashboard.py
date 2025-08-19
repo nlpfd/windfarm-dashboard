@@ -9,8 +9,7 @@ def load_data():
     df = pd.read_csv("scottish_half_hourly_curtailment.csv", parse_dates=["Date"])
     df["DateOnly"] = df["Date"].dt.date
     df["Week"] = df["Date"].dt.strftime('%G-W%V')  # ISO weeks
-
-    # ✅ Correct BOA volumes: MW × 0.5 h = MWh
+    # Correct BOA volumes: MW × 0.5 h = MWh
     df["MWh"] = df["BOA_Volume"] * 0.5
     return df
 
@@ -18,67 +17,57 @@ df = load_data()
 
 # --- UI ---
 st.set_page_config(layout="wide")
-
-# Reduce top padding
 st.markdown("""
     <style>
-        .block-container {
-            padding-top: 1rem;
-            padding-bottom: 1rem;
-        }
-        iframe {
-            width: 100% !important;
-        }
+        .block-container { padding-top: 1rem; padding-bottom: 1rem; }
+        iframe { width: 100% !important; }
     </style>
 """, unsafe_allow_html=True)
 
 st.title("Scottish Wind Farm Curtailment Dashboard - Prototype V1 (Corrected)")
 
 windfarms = df["Generator_Full_Name"].unique()
-windfarm_options = ["All"] + sorted(windfarms)
-selected_farm = st.selectbox("Choose Wind Farm", windfarm_options)
+selected_farm = st.selectbox("Choose Wind Farm", ["All"] + sorted(windfarms))
 
 granularity = st.radio("Select Time Granularity", ["Daily", "Weekly", "Monthly"], horizontal=True)
 
-# --- Month grouping choice ---
-month_type = st.radio(
-    "Select Month Grouping",
-    ["Calendar Months", "Settlement Months"],
-    horizontal=True
-)
+# Show a single toggle only when Monthly is selected
+use_settlement = False
+if granularity == "Monthly":
+    use_settlement = st.toggle("Use Settlement Calendar (23:00–23:00)", value=False, help="Matches NESO settlement months / Windtable")
 
-if selected_farm == "All":
-    filtered = df.copy()
-else:
-    filtered = df[df["Generator_Full_Name"] == selected_farm]
+# Filter data
+filtered = df if selected_farm == "All" else df[df["Generator_Full_Name"] == selected_farm]
+filtered = filtered.copy()
 
-# Apply month definition
-if month_type == "Calendar Months":
-    filtered["Month"] = filtered["Date"].dt.to_period("M").astype(str)
-else:
-    # Settlement months: shift by 1 hour to push 23:00–23:30 into next day
-    filtered["Month"] = (filtered["Date"] - pd.Timedelta(hours=1)).dt.to_period("M").astype(str)
+# Build Month only if needed, default is traditional calendar months
+if granularity == "Monthly":
+    if use_settlement:
+        # shift back 1h so 23:00–23:30 rolls into next day/month (settlement convention)
+        filtered["Month"] = (filtered["Date"] - pd.Timedelta(hours=1)).dt.to_period("M").astype(str)
+    else:
+        filtered["Month"] = filtered["Date"].dt.to_period("M").astype(str)
 
 # --- Total ---
-total = filtered["MWh"].sum()
-st.markdown(f"### Total Curtailed (MWh)\n**{total:,.1f}**")
+st.markdown(f"### Total Curtailed (MWh)\n**{filtered['MWh'].sum():,.1f}**")
 
 # --- Plotting ---
 title_prefix = "all listed Wind Farms" if selected_farm == "All" else selected_farm
 
 if granularity == "Daily":
-    daily = filtered.groupby("DateOnly")["MWh"].sum().reset_index()
+    daily = filtered.groupby("DateOnly", as_index=False)["MWh"].sum()
     fig = px.bar(daily, x="DateOnly", y="MWh", title=f"Daily Curtailment for {title_prefix}")
     fig.update_traces(marker_color="steelblue")
 
 elif granularity == "Weekly":
-    weekly = filtered.groupby("Week")["MWh"].sum().reset_index()
+    weekly = filtered.groupby("Week", as_index=False)["MWh"].sum()
     fig = px.bar(weekly, x="Week", y="MWh", title=f"Weekly Curtailment for {title_prefix}")
     fig.update_traces(marker_color="mediumblue")
 
 else:  # Monthly
-    monthly = filtered.groupby("Month")["MWh"].sum().reset_index()
-    fig = px.bar(monthly, x="Month", y="MWh", title=f"Monthly Curtailment for {title_prefix}")
+    monthly = filtered.groupby("Month", as_index=False)["MWh"].sum()
+    label = "Settlement Month" if use_settlement else "Calendar Month"
+    fig = px.bar(monthly, x="Month", y="MWh", title=f"Monthly Curtailment for {title_prefix} ({label})")
     fig.update_traces(marker_color="darkblue")
 
 fig.update_layout(
@@ -88,15 +77,13 @@ fig.update_layout(
     margin=dict(l=0, r=0, t=40, b=0),
     height=340
 )
-
 st.plotly_chart(fig, use_container_width=True)
 
-# --- Responsive Embedded Google Map Below ---
+# --- Map ---
 st.markdown("### 📍 Interactive Curtailment Map (2023–2025)")
 components.iframe(
     src="https://www.google.com/maps/d/embed?mid=1XPZ5YKrHSGNfGw05w_NyET_U_hotcGk&ehbc=2E312F",
-    width=0,
-    height=620
+    width=0, height=620
 )
 st.markdown(
     "<div style='font-size: 0.85rem; color: grey; margin-top: -0.5rem;'>"
@@ -105,12 +92,11 @@ st.markdown(
     unsafe_allow_html=True
 )
 
-# --- Footer Text ---
+# --- Footer ---
 st.markdown("---")
 st.markdown(
     "<div style='text-align: center; font-size: 0.9rem; color: grey;'>"
-    "This is an experimental prototype built on NESO curtailment data. It's intended for educational and exploratory use only, "
-    "and should not be interpreted as an official representation of NESO data or policy."
+    "This is an experimental prototype built on NESO curtailment data. It's intended for educational and exploratory use only."
     "</div>",
     unsafe_allow_html=True
 )
