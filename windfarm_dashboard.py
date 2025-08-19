@@ -67,11 +67,21 @@ if granularity == "Daily":
 
 elif granularity == "Weekly":
     weekly = filtered.groupby("Week", as_index=False)["MWh"].sum()
-    # generate all ISO weeks in the year
-    all_weeks = pd.period_range(f"{selected_year}-01-01", f"{selected_year}-12-31", freq="W")
-    all_weeks = all_weeks.astype(str)
+
+    # Generate all ISO weeks for the selected year
+    all_week_dates = pd.date_range(
+        f"{selected_year}-01-01", f"{selected_year}-12-31", freq="W-MON"
+    )  # Mondays = start of ISO week
+    all_weeks_iso = all_week_dates.isocalendar()
+    all_weeks = (
+        all_weeks_iso["year"].astype(str) + "-W" + all_weeks_iso["week"].astype(str).str.zfill(2)
+    )
+    all_weeks = sorted(all_weeks.unique())
+
+    # Reindex weekly data
     weekly = weekly.set_index("Week").reindex(all_weeks, fill_value=0).reset_index()
     weekly.rename(columns={"index": "Week"}, inplace=True)
+
     fig = px.bar(weekly, x="Week", y="MWh",
                  title=f"Weekly Curtailment for {title_prefix} ({selected_year})")
     fig.update_traces(marker_color="mediumblue")
