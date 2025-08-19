@@ -24,7 +24,7 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-st.title("Scottish Wind Farm Curtailment Dashboard - Prototype V1 (Corrected)")
+st.title("Scottish Wind Farm Curtailment Dashboard - Prototype V2")
 
 # --- Farm selector ---
 windfarms = df["Generator_Full_Name"].unique()
