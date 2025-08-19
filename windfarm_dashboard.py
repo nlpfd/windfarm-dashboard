@@ -51,7 +51,7 @@ total = filtered["MWh"].sum()
 st.markdown(f"### Total Curtailed (MWh)\n**{total:,.1f}**")
 
 # --- Plotting ---
-title_prefix = "All Listed Wind Farms" if selected_farm == "All" else selected_farm
+title_prefix = "all listed Wind Farms" if selected_farm == "All" else selected_farm
 
 if granularity == "Daily":
     daily = filtered.groupby("DateOnly")["MWh"].sum().reset_index()
