@@ -26,6 +26,11 @@ st.markdown("""
 
 st.title("Scottish Wind Farm Curtailment Dashboard - Prototype V2")
 
+# --- Year selector ---
+years = sorted(df["Date"].dt.year.unique())
+selected_year = st.selectbox("Select Year", years, index=years.index(2024))
+df = df[df["Date"].dt.year == selected_year]
+
 # --- Farm selector ---
 windfarms = df["Generator_Full_Name"].unique()
 selected_farm = st.selectbox("Choose Wind Farm", ["All"] + sorted(windfarms))
@@ -45,24 +50,24 @@ filtered["Month"] = filtered["Date"].dt.to_period("M").astype(str)
 
 # --- Total ---
 total = filtered["MWh"].sum()
-st.markdown(f"### Total Curtailed (MWh)\n**{total:,.1f}**")
+st.markdown(f"### Total Curtailed (MWh) in {selected_year}\n**{total:,.1f}**")
 
 # --- Plotting ---
 title_prefix = "all listed Wind Farms" if selected_farm == "All" else selected_farm
 
 if granularity == "Daily":
     daily = filtered.groupby("DateOnly", as_index=False)["MWh"].sum()
-    fig = px.bar(daily, x="DateOnly", y="MWh", title=f"Daily Curtailment for {title_prefix}")
+    fig = px.bar(daily, x="DateOnly", y="MWh", title=f"Daily Curtailment for {title_prefix} ({selected_year})")
     fig.update_traces(marker_color="steelblue")
 
 elif granularity == "Weekly":
     weekly = filtered.groupby("Week", as_index=False)["MWh"].sum()
-    fig = px.bar(weekly, x="Week", y="MWh", title=f"Weekly Curtailment for {title_prefix}")
+    fig = px.bar(weekly, x="Week", y="MWh", title=f"Weekly Curtailment for {title_prefix} ({selected_year})")
     fig.update_traces(marker_color="mediumblue")
 
 else:  # Monthly
     monthly = filtered.groupby("Month", as_index=False)["MWh"].sum()
-    fig = px.bar(monthly, x="Month", y="MWh", title=f"Monthly Curtailment for {title_prefix} (Calendar Months)")
+    fig = px.bar(monthly, x="Month", y="MWh", title=f"Monthly Curtailment for {title_prefix} ({selected_year})")
     fig.update_traces(marker_color="darkblue")
 
 fig.update_layout(
