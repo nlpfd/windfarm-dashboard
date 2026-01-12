@@ -105,7 +105,7 @@ fig.update_layout(
 st.plotly_chart(fig, use_container_width=True)
 
 # --- Responsive Embedded Google Map Below ---
-st.markdown("### 📍 Interactive Curtailment Map (2023–2025)")
+st.markdown("### 📍 Interactive Curtailment Map")
 
 map_html = """
 <div style="position: relative; width: 100%; height: 0; padding-bottom: 45%;">
