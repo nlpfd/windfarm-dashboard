@@ -20,7 +20,6 @@ st.set_page_config(layout="wide")
 st.markdown("""
     <style>
         .block-container { padding-top: 1rem; padding-bottom: 1rem; }
-        iframe { width: 100% !important; }
     </style>
 """, unsafe_allow_html=True)
 
@@ -107,10 +106,18 @@ st.plotly_chart(fig, use_container_width=True)
 
 # --- Responsive Embedded Google Map Below ---
 st.markdown("### 📍 Interactive Curtailment Map (2023–2025)")
-components.iframe(
-    src="https://www.google.com/maps/d/embed?mid=1XPZ5YKrHSGNfGw05w_NyET_U_hotcGk&ehbc=2E312F",
-    width=0, height=620
-)
+
+map_html = """
+<div style="position: relative; width: 100%; height: 0; padding-bottom: 45%;">
+    <iframe 
+        src="https://www.google.com/maps/d/embed?mid=1XPZ5YKrHSGNfGw05w_NyET_U_hotcGk&ehbc=2E312F"
+        style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: 0;"
+        allowfullscreen>
+    </iframe>
+</div>
+"""
+components.html(map_html, height=620)
+
 st.markdown(
     "<div style='font-size: 0.85rem; color: grey; margin-top: -0.5rem;'>"
     "📌 <em>Tip:</em> Click the icon in the top-left corner of the map to view the list of wind farms."
